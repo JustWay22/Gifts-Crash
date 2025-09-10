@@ -1,0 +1,44 @@
+<?php
+// login.php
+header('Content-Type: application/json; charset=utf-8');
+require 'db.php';
+
+$username = isset($_POST['username']) ? trim($_POST['username']) : '';
+
+if ($username === '') {
+    echo json_encode(["status"=>"error","message"=>"Empty username"]);
+    exit;
+}
+
+// Check existing
+$stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+$stmt->execute([$username]);
+$user = $stmt->fetch();
+
+if ($user) {
+    // update last login
+    $update = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+    $update->execute([$user['id']]);
+    // re-fetch
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
+} else {
+    // create new user with 0 balance
+    $ins = $pdo->prepare("INSERT INTO users (username, balance, reg_date, last_login) VALUES (?, 0.00, NOW(), NOW())");
+    $ins->execute([$username]);
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
+}
+
+if ($user) {
+    echo json_encode([
+        "status"=>"success",
+        "username"=>$user['username'],
+        "balance"=>number_format((float)$user['balance'], 2, '.', ''),
+        "reg_date"=>$user['reg_date'],
+        "last_login"=>$user['last_login']
+    ]);
+} else {
+    echo json_encode(["status"=>"error","message"=>"User fetch failed"]);
+}
+?>

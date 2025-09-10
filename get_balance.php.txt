@@ -1,0 +1,22 @@
+<?php
+// get_balance.php
+header('Content-Type: application/json; charset=utf-8');
+require 'db.php';
+
+$username = isset($_GET['username']) ? trim($_GET['username']) : '';
+
+if ($username === '') {
+    echo json_encode(["status"=>"error","message"=>"Empty username"]);
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT balance FROM users WHERE username = ?");
+$stmt->execute([$username]);
+$user = $stmt->fetch();
+
+if ($user) {
+    echo json_encode(["status"=>"success","balance"=>number_format((float)$user['balance'],2,'.','')]);
+} else {
+    echo json_encode(["status"=>"error","message"=>"User not found"]);
+}
+?>

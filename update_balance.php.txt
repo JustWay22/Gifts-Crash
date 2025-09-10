@@ -1,0 +1,33 @@
+<?php
+// update_balance.php
+header('Content-Type: application/json; charset=utf-8');
+require 'db.php';
+
+// expects POST: username, amount (can be negative to subtract)
+$username = isset($_POST['username']) ? trim($_POST['username']) : '';
+$amount = isset($_POST['amount']) ? (float)$_POST['amount'] : null;
+
+if ($username === '' || $amount === null) {
+    echo json_encode(["status"=>"error","message"=>"Missing params"]);
+    exit;
+}
+
+$pdo->beginTransaction();
+try {
+    // update balance
+    $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE username = ?");
+    $stmt->execute([$amount, $username]);
+
+    // fetch new balance
+    $stmt2 = $pdo->prepare("SELECT balance FROM users WHERE username = ?");
+    $stmt2->execute([$username]);
+    $user = $stmt2->fetch();
+
+    $pdo->commit();
+
+    echo json_encode(["status"=>"success","balance"=>number_format((float)$user['balance'],2,'.','')]);
+} catch (Exception $e) {
+    $pdo->rollBack();
+    echo json_encode(["status"=>"error","message"=>$e->getMessage()]);
+}
+?>
